@@ -28,6 +28,8 @@ export function useSettingsCommand() {
   const command = useCommand()
   const language = useLanguage()
   const show = useSettingsDialog()
+  // Reachable from both layouts: useSettingsDialog always opens the v2 dialog, which owns the editor.
+  const showAgents = useSettingsDialog("agents")
 
   command.register("settings", () => [
     {
@@ -36,6 +38,12 @@ export function useSettingsCommand() {
       category: language.t("command.category.settings"),
       keybind: "mod+comma",
       onSelect: show,
+    },
+    {
+      id: "settings.agents",
+      title: language.t("command.settings.agents"),
+      category: language.t("command.category.agent"),
+      onSelect: showAgents,
     },
   ])
 

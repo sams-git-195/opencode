@@ -27,6 +27,7 @@ import { RemoteAuthError } from "@opencode-ai/core/v1/config/error"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { ConfigAgent } from "./agent"
+import { ConfigAgentFile } from "./agent-file"
 import { ConfigCommand } from "./command"
 import { ConfigManaged } from "./managed"
 import { ConfigParse } from "./parse"
@@ -119,6 +120,9 @@ type State = {
   directories: string[]
   deps: Fiber.Fiber<void>[]
   consoleState: ConsoleState
+  // On-disk revision of the agent markdown files at the moment this state was built. Comparing it to
+  // a freshly computed revision tells the UI whether the instance needs reloading.
+  agentRevision: string
 }
 
 export interface Interface {
@@ -129,6 +133,7 @@ export interface Interface {
   readonly updateGlobal: (config: Info) => Effect.Effect<{ info: Info; changed: boolean }>
   readonly invalidate: () => Effect.Effect<void>
   readonly directories: () => Effect.Effect<string[]>
+  readonly agentRevision: () => Effect.Effect<string>
   readonly waitForDependencies: () => Effect.Effect<void>
 }
 
@@ -587,6 +592,7 @@ const layer = Layer.effect(
           config: result,
           directories,
           deps,
+          agentRevision: yield* Effect.promise(() => ConfigAgentFile.revision(directories)),
           consoleState: {
             consoleManagedProviders: Array.from(consoleManagedProviders),
             activeOrgName,
@@ -609,6 +615,10 @@ const layer = Layer.effect(
 
     const directories = Effect.fn("Config.directories")(function* () {
       return yield* InstanceState.use(state, (s) => s.directories)
+    })
+
+    const agentRevision = Effect.fn("Config.agentRevision")(function* () {
+      return yield* InstanceState.use(state, (s) => s.agentRevision)
     })
 
     const getConsoleState = Effect.fn("Config.getConsoleState")(function* () {
@@ -667,6 +677,7 @@ const layer = Layer.effect(
       updateGlobal,
       invalidate,
       directories,
+      agentRevision,
       waitForDependencies,
     })
   }),
