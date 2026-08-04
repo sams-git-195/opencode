@@ -1,5 +1,6 @@
 import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
+import { ConfigAgentFile } from "@/config/agent-file"
 import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
 import { Vcs } from "@/project/vcs"
@@ -29,6 +30,11 @@ export const VcsDiffQuery = Schema.Struct({
   context: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
 })
 
+export const AgentFileDeleteQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  path: Schema.String,
+})
+
 export class ApiVcsApplyError extends Schema.ErrorClass<ApiVcsApplyError>("VcsApplyError")(
   {
     name: Schema.Literal("VcsApplyError"),
@@ -40,8 +46,19 @@ export class ApiVcsApplyError extends Schema.ErrorClass<ApiVcsApplyError>("VcsAp
   { httpApiStatus: 400 },
 ) {}
 
+export class ApiAgentFileError extends Schema.ErrorClass<ApiAgentFileError>("AgentFileError")(
+  {
+    name: Schema.Literal("AgentFileError"),
+    data: Schema.Struct({
+      message: Schema.String,
+    }),
+  },
+  { httpApiStatus: 400 },
+) {}
+
 export const InstancePaths = {
   dispose: "/instance/dispose",
+  reload: "/instance/reload",
   path: "/path",
   vcs: "/vcs",
   vcsStatus: "/vcs/status",
@@ -50,6 +67,8 @@ export const InstancePaths = {
   vcsApply: "/vcs/apply",
   command: "/command",
   agent: "/agent",
+  agentFile: "/agent/file",
+  agentFileStatus: "/agent/file/status",
   skill: "/skill",
   lsp: "/lsp",
   formatter: "/formatter",
@@ -67,6 +86,17 @@ export const InstanceApi = HttpApi.make("instance")
             identifier: "instance.dispose",
             summary: "Dispose instance",
             description: "Clean up and dispose the current OpenCode instance, releasing all resources.",
+          }),
+        ),
+        HttpApiEndpoint.post("reload", InstancePaths.reload, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Instance reloaded"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "instance.reload",
+            summary: "Reload instance",
+            description:
+              "Drop cached configuration for the current OpenCode instance so agent, command, and config files are read from disk again.",
           }),
         ),
         HttpApiEndpoint.get("path", InstancePaths.path, {
@@ -154,6 +184,65 @@ export const InstanceApi = HttpApi.make("instance")
             identifier: "app.agents",
             summary: "List agents",
             description: "Get a list of all available AI agents in the OpenCode system.",
+          }),
+        ),
+        HttpApiEndpoint.get("agentFile", InstancePaths.agentFile, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(ConfigAgentFile.Info), "List of editable agent files"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "agentFile.list",
+            summary: "List agent files",
+            description:
+              "List the agent markdown files under the config directories this instance loads agents from, with their frontmatter and prompt.",
+          }),
+        ),
+        HttpApiEndpoint.put("agentFileUpdate", InstancePaths.agentFile, {
+          query: WorkspaceRoutingQuery,
+          payload: ConfigAgentFile.Update,
+          success: described(ConfigAgentFile.Info, "Updated agent file"),
+          error: ApiAgentFileError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "agentFile.update",
+            summary: "Update agent file",
+            description:
+              "Write frontmatter and prompt back to an agent markdown file. Frontmatter keys the editor does not model are preserved.",
+          }),
+        ),
+        HttpApiEndpoint.post("agentFileCreate", InstancePaths.agentFile, {
+          query: WorkspaceRoutingQuery,
+          payload: ConfigAgentFile.Create,
+          success: described(ConfigAgentFile.Info, "Created agent file"),
+          error: ApiAgentFileError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "agentFile.create",
+            summary: "Create agent file",
+            description:
+              "Create a new agent markdown file under the project or global config directory. Fails when the agent already exists.",
+          }),
+        ),
+        HttpApiEndpoint.delete("agentFileDelete", InstancePaths.agentFile, {
+          query: AgentFileDeleteQuery,
+          success: described(Schema.Boolean, "Agent file deleted"),
+          error: ApiAgentFileError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "agentFile.delete",
+            summary: "Delete agent file",
+            description: "Delete an agent markdown file from one of the config directories this instance loads.",
+          }),
+        ),
+        HttpApiEndpoint.get("agentFileStatus", InstancePaths.agentFileStatus, {
+          query: WorkspaceRoutingQuery,
+          success: described(ConfigAgentFile.Status, "Agent file revision"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "agentFile.status",
+            summary: "Get agent file status",
+            description:
+              "Compare the on-disk revision of the agent markdown files against the revision the running instance loaded.",
           }),
         ),
         HttpApiEndpoint.get("skill", InstancePaths.skill, {

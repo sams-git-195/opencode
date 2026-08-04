@@ -3,6 +3,18 @@
 import { client } from "./client.gen.js"
 import { buildClientParams, type Client, type Options as Options2, type TDataShape } from "./client/index.js"
 import type {
+  AgentFileCreate,
+  AgentFileCreateErrors,
+  AgentFileCreateResponses,
+  AgentFileDeleteErrors,
+  AgentFileDeleteResponses,
+  AgentFileListErrors,
+  AgentFileListResponses,
+  AgentFileStatusErrors,
+  AgentFileStatusResponses,
+  AgentFileUpdate,
+  AgentFileUpdateErrors,
+  AgentFileUpdateResponses,
   AgentPartInput,
   AppAgentsErrors,
   AppAgentsResponses,
@@ -90,6 +102,8 @@ import type {
   GlobalUpgradeResponses,
   InstanceDisposeErrors,
   InstanceDisposeResponses,
+  InstanceReloadErrors,
+  InstanceReloadResponses,
   LocationRef,
   LspStatusErrors,
   LspStatusResponses,
@@ -1952,6 +1966,36 @@ export class Instance extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Reload instance
+   *
+   * Drop cached configuration for the current OpenCode instance so agent, command, and config files are read from disk again.
+   */
+  public reload<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<InstanceReloadResponses, InstanceReloadErrors, ThrowOnError>({
+      url: "/instance/reload",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Path extends HeyApiClient {
@@ -2182,6 +2226,174 @@ export class Command extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<CommandListResponses, CommandListErrors, ThrowOnError>({
       url: "/command",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class AgentFile extends HeyApiClient {
+  /**
+   * Delete agent file
+   *
+   * Delete an agent markdown file from one of the config directories this instance loads.
+   */
+  public delete<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      path: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "path" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<AgentFileDeleteResponses, AgentFileDeleteErrors, ThrowOnError>({
+      url: "/agent/file",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List agent files
+   *
+   * List the agent markdown files under the config directories this instance loads agents from, with their frontmatter and prompt.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentFileListResponses, AgentFileListErrors, ThrowOnError>({
+      url: "/agent/file",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create agent file
+   *
+   * Create a new agent markdown file under the project or global config directory. Fails when the agent already exists.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agentFileCreate?: AgentFileCreate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "agentFileCreate", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AgentFileCreateResponses, AgentFileCreateErrors, ThrowOnError>({
+      url: "/agent/file",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Update agent file
+   *
+   * Write frontmatter and prompt back to an agent markdown file. Frontmatter keys the editor does not model are preserved.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agentFileUpdate?: AgentFileUpdate
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "agentFileUpdate", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<AgentFileUpdateResponses, AgentFileUpdateErrors, ThrowOnError>({
+      url: "/agent/file",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get agent file status
+   *
+   * Compare the on-disk revision of the agent markdown files against the revision the running instance loaded.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentFileStatusResponses, AgentFileStatusErrors, ThrowOnError>({
+      url: "/agent/file/status",
       ...options,
       ...params,
     })
@@ -7150,6 +7362,11 @@ export class OpencodeClient extends HeyApiClient {
   private _command?: Command
   get command(): Command {
     return (this._command ??= new Command({ client: this.client }))
+  }
+
+  private _agentFile?: AgentFile
+  get agentFile(): AgentFile {
+    return (this._agentFile ??= new AgentFile({ client: this.client }))
   }
 
   private _lsp?: Lsp

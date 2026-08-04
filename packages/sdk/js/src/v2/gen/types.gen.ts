@@ -2369,6 +2369,61 @@ export type Agent = {
   steps?: number
 }
 
+export type AgentFileScope = "project" | "global"
+
+export type AgentFileFrontmatter = {
+  description?: string
+  mode?: "subagent" | "primary" | "all"
+  model?: string
+  variant?: string
+  temperature?: number
+  top_p?: number
+  steps?: number
+  color?: string
+  hidden?: boolean
+  disable?: boolean
+  permission?: {
+    [key: string]: PermissionRuleConfig
+  }
+}
+
+export type AgentFile = {
+  name: string
+  path: string
+  directory: string
+  scope: AgentFileScope
+  frontmatter: AgentFileFrontmatter
+  prompt: string
+  extra: Array<string>
+  error?: string
+}
+
+export type AgentFileUpdate = {
+  path: string
+  frontmatter: AgentFileFrontmatter
+  prompt: string
+}
+
+export type AgentFileError = {
+  name: "AgentFileError"
+  data: {
+    message: string
+  }
+}
+
+export type AgentFileCreate = {
+  name: string
+  scope: AgentFileScope
+  frontmatter: AgentFileFrontmatter
+  prompt: string
+}
+
+export type AgentFileStatus = {
+  revision: string
+  loaded: string
+  stale: boolean
+}
+
 export type LspStatus = {
   id: string
   name: string
@@ -8109,6 +8164,34 @@ export type InstanceDisposeResponses = {
 
 export type InstanceDisposeResponse = InstanceDisposeResponses[keyof InstanceDisposeResponses]
 
+export type InstanceReloadData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/instance/reload"
+}
+
+export type InstanceReloadErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type InstanceReloadError = InstanceReloadErrors[keyof InstanceReloadErrors]
+
+export type InstanceReloadResponses = {
+  /**
+   * Instance reloaded
+   */
+  200: boolean
+}
+
+export type InstanceReloadResponse = InstanceReloadResponses[keyof InstanceReloadResponses]
+
 export type PathGetData = {
   body?: never
   path?: never
@@ -8338,6 +8421,147 @@ export type AppAgentsResponses = {
 }
 
 export type AppAgentsResponse = AppAgentsResponses[keyof AppAgentsResponses]
+
+export type AgentFileDeleteData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    path: string
+  }
+  url: "/agent/file"
+}
+
+export type AgentFileDeleteErrors = {
+  /**
+   * AgentFileError | InvalidRequestError
+   */
+  400: AgentFileError | InvalidRequestError
+}
+
+export type AgentFileDeleteError = AgentFileDeleteErrors[keyof AgentFileDeleteErrors]
+
+export type AgentFileDeleteResponses = {
+  /**
+   * Agent file deleted
+   */
+  200: boolean
+}
+
+export type AgentFileDeleteResponse = AgentFileDeleteResponses[keyof AgentFileDeleteResponses]
+
+export type AgentFileListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/file"
+}
+
+export type AgentFileListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentFileListError = AgentFileListErrors[keyof AgentFileListErrors]
+
+export type AgentFileListResponses = {
+  /**
+   * List of editable agent files
+   */
+  200: Array<AgentFile>
+}
+
+export type AgentFileListResponse = AgentFileListResponses[keyof AgentFileListResponses]
+
+export type AgentFileCreateData = {
+  body?: AgentFileCreate
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/file"
+}
+
+export type AgentFileCreateErrors = {
+  /**
+   * AgentFileError | InvalidRequestError
+   */
+  400: AgentFileError | InvalidRequestError
+}
+
+export type AgentFileCreateError = AgentFileCreateErrors[keyof AgentFileCreateErrors]
+
+export type AgentFileCreateResponses = {
+  /**
+   * Created agent file
+   */
+  200: AgentFile
+}
+
+export type AgentFileCreateResponse = AgentFileCreateResponses[keyof AgentFileCreateResponses]
+
+export type AgentFileUpdateData = {
+  body?: AgentFileUpdate
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/file"
+}
+
+export type AgentFileUpdateErrors = {
+  /**
+   * AgentFileError | InvalidRequestError
+   */
+  400: AgentFileError | InvalidRequestError
+}
+
+export type AgentFileUpdateError = AgentFileUpdateErrors[keyof AgentFileUpdateErrors]
+
+export type AgentFileUpdateResponses = {
+  /**
+   * Updated agent file
+   */
+  200: AgentFile
+}
+
+export type AgentFileUpdateResponse = AgentFileUpdateResponses[keyof AgentFileUpdateResponses]
+
+export type AgentFileStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/agent/file/status"
+}
+
+export type AgentFileStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentFileStatusError = AgentFileStatusErrors[keyof AgentFileStatusErrors]
+
+export type AgentFileStatusResponses = {
+  /**
+   * Agent file revision
+   */
+  200: AgentFileStatus
+}
+
+export type AgentFileStatusResponse = AgentFileStatusResponses[keyof AgentFileStatusResponses]
 
 export type AppSkillsData = {
   body?: never

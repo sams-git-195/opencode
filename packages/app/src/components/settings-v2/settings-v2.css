@@ -1,4 +1,5 @@
 @import "@opencode-ai/ui/v2/text-input-v2.css";
+@import "@opencode-ai/ui/v2/textarea-v2.css";
 @import "@opencode-ai/ui/v2/button-v2.css";
 
 [data-component="tabs-v2"][data-variant="settings"] {
@@ -726,4 +727,134 @@
   font-weight: 440;
   line-height: 1;
   color: var(--v2-state-fg-danger);
+}
+
+.settings-v2-agents-header .settings-v2-tab-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-v2-agents-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-v2-agents-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-v2-agents-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-block: 48px;
+  font-size: 13px;
+  font-weight: 440;
+  line-height: 1.4;
+  color: var(--v2-text-text-muted);
+  text-align: center;
+}
+
+.settings-v2-agents-error {
+  padding-block: 12px;
+  color: var(--v2-state-fg-danger);
+}
+
+/* textarea-v2 ships a fixed 280px width; the prompt editor wants the full panel. */
+.settings-v2-agents [data-component="textarea-v2"] {
+  width: 100%;
+}
+
+.settings-v2-agents-note {
+  font-size: 11px;
+  font-weight: 440;
+  line-height: 1.4;
+  color: var(--v2-text-text-muted);
+}
+
+.settings-v2-agents-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 16px;
+  background: linear-gradient(to top, var(--v2-background-bg-base) calc(100% - 16px), transparent);
+}
+
+.settings-v2-agents-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 440;
+  color: var(--v2-text-text-muted);
+}
+
+.settings-v2-agents-buttons {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-v2-agents-buttons--end {
+  justify-content: flex-end;
+}
+
+/* One permission owns the header row plus its optional pattern list, so the separator moves to the
+   wrapper and the inner row drops its own. */
+.settings-v2-agents-permission {
+  border-bottom: 0.5px solid var(--v2-border-border-base);
+}
+
+.settings-v2-agents-permission:last-child {
+  border-bottom: none;
+}
+
+.settings-v2-agents-permission [data-component="settings-v2-row"] {
+  border-bottom: none;
+}
+
+.settings-v2-agents-patterns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 20px;
+}
+
+.settings-v2-agents-pattern-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-v2-agents-pattern-row .settings-v2-agents-pattern-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-v2-agents-pattern-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.settings-v2-agents-pattern-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
 }

@@ -2278,6 +2278,61 @@
         ]
       }
     },
+    "/instance/reload": {
+      "post": {
+        "tags": ["instance"],
+        "operationId": "instance.reload",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Instance reloaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Instance reloaded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Drop cached configuration for the current OpenCode instance so agent, command, and config files are read from disk again.",
+        "summary": "Reload instance",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.instance.reload({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/path": {
       "get": {
         "tags": ["instance"],
@@ -2771,6 +2826,322 @@
           {
             "lang": "js",
             "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.app.agents({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/agent/file": {
+      "get": {
+        "tags": ["instance"],
+        "operationId": "agentFile.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of editable agent files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentFile"
+                  },
+                  "description": "List of editable agent files"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the agent markdown files under the config directories this instance loads agents from, with their frontmatter and prompt.",
+        "summary": "List agent files",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.agentFile.list({\n  ...\n})"
+          }
+        ]
+      },
+      "put": {
+        "tags": ["instance"],
+        "operationId": "agentFile.update",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated agent file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentFile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AgentFileError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AgentFileError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Write frontmatter and prompt back to an agent markdown file. Frontmatter keys the editor does not model are preserved.",
+        "summary": "Update agent file",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentFileUpdate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.agentFile.update({\n  ...\n})"
+          }
+        ]
+      },
+      "post": {
+        "tags": ["instance"],
+        "operationId": "agentFile.create",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created agent file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentFile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AgentFileError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AgentFileError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a new agent markdown file under the project or global config directory. Fails when the agent already exists.",
+        "summary": "Create agent file",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentFileCreate"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.agentFile.create({\n  ...\n})"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["instance"],
+        "operationId": "agentFile.delete",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent file deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Agent file deleted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AgentFileError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AgentFileError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete an agent markdown file from one of the config directories this instance loads.",
+        "summary": "Delete agent file",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.agentFile.delete({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/agent/file/status": {
+      "get": {
+        "tags": ["instance"],
+        "operationId": "agentFile.status",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent file revision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentFileStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Compare the on-disk revision of the agent markdown files against the revision the running instance loaded.",
+        "summary": "Get agent file status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.agentFile.status({\n  ...\n})"
           }
         ]
       }
@@ -22565,6 +22936,159 @@
           }
         },
         "required": ["name", "mode", "permission", "options"],
+        "additionalProperties": false
+      },
+      "AgentFileScope": {
+        "type": "string",
+        "enum": ["project", "global"]
+      },
+      "AgentFileFrontmatter": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["subagent", "primary", "all"]
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "temperature": {
+            "type": "number"
+          },
+          "top_p": {
+            "type": "number"
+          },
+          "steps": {
+            "type": "number"
+          },
+          "color": {
+            "type": "string"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "disable": {
+            "type": "boolean"
+          },
+          "permission": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PermissionRuleConfig"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgentFile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AgentFileScope"
+          },
+          "frontmatter": {
+            "$ref": "#/components/schemas/AgentFileFrontmatter"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "extra": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "path", "directory", "scope", "frontmatter", "prompt", "extra"],
+        "additionalProperties": false
+      },
+      "AgentFileUpdate": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "frontmatter": {
+            "$ref": "#/components/schemas/AgentFileFrontmatter"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": ["path", "frontmatter", "prompt"],
+        "additionalProperties": false
+      },
+      "AgentFileError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["AgentFileError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
+      "AgentFileCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AgentFileScope"
+          },
+          "frontmatter": {
+            "$ref": "#/components/schemas/AgentFileFrontmatter"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "scope", "frontmatter", "prompt"],
+        "additionalProperties": false
+      },
+      "AgentFileStatus": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "loaded": {
+            "type": "string"
+          },
+          "stale": {
+            "type": "boolean"
+          }
+        },
+        "required": ["revision", "loaded", "stale"],
         "additionalProperties": false
       },
       "LSPStatus": {
