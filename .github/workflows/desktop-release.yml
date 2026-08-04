@@ -78,9 +78,13 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
           OPENCODE_CHANNEL: prod
 
+      # --publish never is required: the `publish` block in electron-builder.config.ts makes
+      # electron-builder upload to GitHub itself as soon as it detects CI and a tag, which needs its own
+      # token and would race the explicit release step below. Build the artifacts only and let that step
+      # own publishing. (`bun run package:win` omits the flag, so call the builder directly.)
       - name: Package
         working-directory: packages/desktop
-        run: bun run package:win
+        run: bunx electron-builder --win --publish never --config electron-builder.config.ts
         env:
           OPENCODE_CHANNEL: prod
 
