@@ -89,3 +89,21 @@ for (const channel of ["beta", "prod"] as const) {
     })
   })
 }
+
+// A packaged build bakes `publish` into resources/app-update.yml, which is the feed the installed app
+// polls. Pointing it at upstream would offer upstream releases and replace this fork's own app.
+test("prod publishes the updater feed to this fork", async () => {
+  const previous = process.env.OPENCODE_CHANNEL
+  process.env.OPENCODE_CHANNEL = "prod"
+  const module = await import(`./electron-builder.config.ts?publish=prod`)
+  const config = module.default as Configuration
+  if (previous === undefined) delete process.env.OPENCODE_CHANNEL
+  else process.env.OPENCODE_CHANNEL = previous
+
+  expect(config.publish).toEqual({
+    provider: "github",
+    owner: "sams-git-195",
+    repo: "opencode",
+    channel: "latest",
+  })
+})

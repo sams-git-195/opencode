@@ -1,0 +1,105 @@
+name: desktop-release
+run-name: "desktop ${{ inputs.version || github.ref_name }}"
+
+# Builds the Windows desktop app for this fork and publishes it as a GitHub Release.
+# electron-updater in the installed app reads latest.yml from the release assets, so the three
+# artifacts uploaded here are what turn a merge into an in-app update.
+#
+# Trigger by pushing a tag (`git tag v1.18.14 && git push origin v1.18.14`) or from the Actions tab.
+# The upstream publish.yml is skipped on forks, so this does not collide with it.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 1.18.14"
+        required: true
+        type: string
+
+concurrency: ${{ github.workflow }}-${{ inputs.version || github.ref_name }}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::Expected a semver version, got '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # Native install scripts (tree-sitter-powershell) are not needed to package the desktop app,
+      # and they fail on some runner images. electron-builder downloads Electron itself.
+      - name: Install dependencies
+        run: bun install --linker hoisted --ignore-scripts
+
+      # electron-builder reads the version from packages/desktop/package.json and writes it into
+      # latest.yml, which is what the updater compares against. Drive it from the tag so the release
+      # and the feed can never disagree.
+      - name: Stamp version
+        shell: bash
+        run: |
+          bun --eval '
+            const path = "packages/desktop/package.json"
+            const pkg = await Bun.file(path).json()
+            pkg.version = process.env.VERSION
+            await Bun.write(path, JSON.stringify(pkg, null, 2) + "\n")
+          '
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Build
+        working-directory: packages/desktop
+        run: bun run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          OPENCODE_CHANNEL: prod
+
+      - name: Package
+        working-directory: packages/desktop
+        run: bun run package:win
+        env:
+          OPENCODE_CHANNEL: prod
+
+      # --clobber so re-running a tag replaces the assets instead of failing on duplicates.
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          cd packages/desktop/dist
+          shopt -s nullglob
+          files=(opencode-desktop-win-*.exe opencode-desktop-win-*.exe.blockmap latest.yml)
+          if (( ${#files[@]} < 2 )); then
+            echo "::error::Expected the installer and latest.yml in packages/desktop/dist"
+            ls -la
+            exit 1
+          fi
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"

@@ -41,6 +41,12 @@ const APP_IDS = {
   prod: "ai.opencode.desktop",
 } as const
 
+// Fork divergence: this repository publishes its own desktop builds, so the updater feed has to point
+// here rather than at upstream. Without it a packaged build offers upstream releases and replaces the
+// fork's own app. Override the owner/repo when building for a different fork.
+const PUBLISH_OWNER = process.env.OPENCODE_PUBLISH_OWNER || "sams-git-195"
+const PUBLISH_REPO = process.env.OPENCODE_PUBLISH_REPO || "opencode"
+
 const getBase = (appId: string): Configuration => ({
   artifactName: "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
@@ -149,7 +155,7 @@ function getConfig() {
         appId,
         productName: "OpenCode",
         protocols: { name: "OpenCode", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode", channel: "latest" },
+        publish: { provider: "github", owner: PUBLISH_OWNER, repo: PUBLISH_REPO, channel: "latest" },
         deb: { fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
         rpm: { packageName: "opencode", fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
       }
