@@ -1,12 +1,13 @@
 name: desktop-release
 run-name: "desktop ${{ inputs.version || github.ref_name }}"
 
-# Builds the Windows desktop app for this fork and publishes it as a GitHub Release.
-# electron-updater in the installed app reads latest.yml from the release assets, so the three
-# artifacts uploaded here are what turn a merge into an in-app update.
+# Builds the desktop app for this fork and publishes it as a GitHub Release.
+# electron-updater in the installed app reads latest.yml (Windows) / latest-linux.yml (AppImage) from
+# the release assets, so those manifests are what turn a merge into an in-app update. The .deb and .rpm
+# are plain downloads — electron-updater cannot self-update those, the system package manager owns them.
 #
-# Trigger by pushing a tag (`git tag v1.18.14 && git push origin v1.18.14`) or from the Actions tab.
-# The upstream publish.yml is skipped on forks, so this does not collide with it.
+# Trigger by pushing a tag (`git tag v1.18.18 && git push --no-verify origin v1.18.18`) or from the
+# Actions tab. The upstream publish.yml is guarded to anomalyco/opencode and skips on forks.
 
 on:
   push:
@@ -15,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release, e.g. 1.18.14"
+        description: "Version to release, e.g. 1.18.18"
         required: true
         type: string
 
@@ -25,9 +26,13 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
-    timeout-minutes: 90
+  # Resolving the version and creating the release once, up front, keeps the matrix jobs from racing
+  # each other to create the same tag's release.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,6 +52,44 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
+      - name: Ensure release exists
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+
+  build:
+    needs: prepare
+    strategy:
+      # One platform failing should not cancel the other's build.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: "--win"
+            # latest.yml is the Windows updater manifest; the blockmap lets it fetch only changed chunks.
+            artifacts: "opencode-desktop-win-*.exe opencode-desktop-win-*.exe.blockmap latest.yml"
+          - os: ubuntu-latest
+            platform: "--linux"
+            # Deliberately broad: electron-builder does not always apply artifactName to deb/rpm, whose
+            # fpm-driven names differ from the AppImage. dist/ holds only this build's output.
+            artifacts: "*.AppImage *.AppImage.blockmap *.deb *.rpm latest-linux.yml"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # electron-builder shells out to `rpm` to build the .rpm; it is not on the runner by default.
+      - name: Install rpm tooling
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends rpm
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -56,11 +99,13 @@ jobs:
       - name: Install dependencies
         run: bun install --linker hoisted --ignore-scripts
 
-      # electron-builder reads the version from packages/desktop/package.json and writes it into
-      # latest.yml, which is what the updater compares against. Drive it from the tag so the release
-      # and the feed can never disagree.
+      # electron-builder reads the version from packages/desktop/package.json and writes it into the
+      # updater manifests, which is what the installed app compares against. Drive it from the tag so
+      # the release and the manifests can never disagree.
       - name: Stamp version
         shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           bun --eval '
             const path = "packages/desktop/package.json"
@@ -68,8 +113,6 @@ jobs:
             pkg.version = process.env.VERSION
             await Bun.write(path, JSON.stringify(pkg, null, 2) + "\n")
           '
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
 
       - name: Build
         working-directory: packages/desktop
@@ -80,30 +123,27 @@ jobs:
 
       # --publish never is required: the `publish` block in electron-builder.config.ts makes
       # electron-builder upload to GitHub itself as soon as it detects CI and a tag, which needs its own
-      # token and would race the explicit release step below. Build the artifacts only and let that step
-      # own publishing. (`bun run package:win` omits the flag, so call the builder directly.)
+      # token and would race the upload step below. Build the artifacts only.
       - name: Package
         working-directory: packages/desktop
-        run: bunx electron-builder --win --publish never --config electron-builder.config.ts
+        run: bunx electron-builder ${{ matrix.platform }} --publish never --config electron-builder.config.ts
         env:
           OPENCODE_CHANNEL: prod
 
-      # --clobber so re-running a tag replaces the assets instead of failing on duplicates.
-      - name: Publish release
+      # --clobber so re-running a tag replaces assets instead of failing on duplicates.
+      - name: Upload assets
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           cd packages/desktop/dist
           shopt -s nullglob
-          files=(opencode-desktop-win-*.exe opencode-desktop-win-*.exe.blockmap latest.yml)
-          if (( ${#files[@]} < 2 )); then
-            echo "::error::Expected the installer and latest.yml in packages/desktop/dist"
+          files=(${{ matrix.artifacts }})
+          if (( ${#files[@]} == 0 )); then
+            echo "::error::No artifacts matched for ${{ matrix.os }}"
             ls -la
             exit 1
           fi
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
-          fi
+          printf 'uploading: %s\n' "${files[@]}"
           gh release upload "$TAG" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
