@@ -96,8 +96,21 @@ jobs:
 
       # Native install scripts (tree-sitter-powershell) are not needed to package the desktop app,
       # and they fail on some runner images. electron-builder downloads Electron itself.
+      # Retried because applying a patchfile races itself on Windows and fails with
+      # "renaming changes to cache dir: ENOTEMPTY" (oven-sh/bun#28147). The collision is a half-written
+      # entry in bun's cache, so the cache is cleared before each retry rather than just re-running.
+      # --linker hoisted is the same workaround the repo's own setup-bun action applies on Windows.
       - name: Install dependencies
-        run: bun install --linker hoisted --ignore-scripts
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if bun install --linker hoisted --ignore-scripts; then exit 0; fi
+            echo "::warning::bun install failed (attempt ${attempt}); clearing cache and retrying"
+            rm -rf "$(bun pm cache)" || true
+            sleep 5
+          done
+          echo "::error::bun install failed after 3 attempts"
+          exit 1
 
       # electron-builder reads the version from packages/desktop/package.json and writes it into the
       # updater manifests, which is what the installed app compares against. Drive it from the tag so
